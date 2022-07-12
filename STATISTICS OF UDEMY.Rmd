@@ -1,0 +1,341 @@
+---
+title: "STATISTICS OF UDEMY COURSES"
+author: "Mustafa ÇANDIR"
+date: '2022-07-12'
+output: pdf_document
+---
+##libraries
+```{r}
+library(ggplot2)
+library(dplyr)
+library(MASS)
+library(AID)
+library(car)
+library(corrplot)
+library(hrbrthemes)
+```
+
+##read data
+```{r}
+dataudemy <- read.csv("D:/github/stat 250 2nd time/udemy_courses.csv")
+
+```
+
+## plots for variables
+#1
+```{r}
+dataudemy %>%
+  ggplot( aes(x=price)) +
+    geom_density(fill="yellow", 
+                 color="blue", 
+                 alpha=0.9)
+
+```
+
+#2
+```{r}
+tab2 <- as.data.frame(table(dataudemy$level))
+tab2
+barplot(height=tab2$Freq, 
+        names=tab2$Var1, 
+        col="blue",
+        # horiz=F, 
+        las=1,
+        main = "Price in levels",
+        ylab = "Price",
+        xlab = "Levels")
+```
+
+#3
+```{r}
+ ggplot(data=dataudemy, 
+             aes(x=price, 
+                group=subject, 
+                fill=subject)) +
+    geom_density(adjust=1.2, 
+                 alpha=0.5) 
+```
+
+#4
+only numerics as simple table
+```{r}
+corr=round(cor(dataudemy[,c(5,6,7,8,10)]),3)
+corr
+```
+
+# corelation matrix as a plot
+```{r}
+corrplot(corr, 
+         type = "upper", 
+         order = "hclust", 
+         tl.col = "black", 
+         tl.srt = 45)
+```
+
+#5
+The most popular 3 courses
+```{r}
+asd<-dataudemy[order(dataudemy$num_subscribers,
+                                  decreasing = TRUE),]
+
+barplot(asdbar$num_subscribers[1:3],
+        main="The most popular 3 courses",
+        xlab="Courses",
+        ylab="Number of Subscribers",
+        names.arg = asd$course_title[1:3],
+        cex.names=0.7,
+        col="orange")
+```
+
+#6
+```{r}
+ggplot(dataudemy, 
+       aes(x=num_subscribers, 
+                      y=num_lectures)) + 
+  geom_point() + 
+  stat_smooth(method = lm)
+  
+ggplot(dataudemy, 
+       aes(x=price, 
+           y=num_lectures)) + 
+  geom_point()+ 
+  stat_smooth(method = lm)
+  
+ggplot(dataudemy, 
+       aes(x=num_reviews, 
+           y=num_lectures)) + 
+  geom_point() 
+
+ggplot(dataudemy, 
+       aes(x=content_duration, 
+           y=num_lectures)) + 
+  geom_point() 
+
+ggplot(dataudemy, 
+       aes(x=is_paid, 
+           y=num_lectures)) + 
+  geom_boxplot()
+
+ggplot(data = dataudemy, 
+       aes(x = num_reviews, 
+           y = num_lectures, 
+           col = is_paid)) +
+  geom_point() + geom_smooth()
+```
+
+### Tests
+
+# Is the average price paid for courses different from 40? 
+
+```{r}
+t.test(dataudemy$price,
+       mu = 40)
+```
+#Are the average number of subscribers and the number of reviews equal to each other? 
+
+```{r}
+t.test(x = dataudemy$num_subscribers, 
+       y = dataudemy$num_reviews)
+```
+
+#Is there any difference between the average price for different levels?
+```{r}
+ggplot(dataudemy, 
+       aes(x = level, 
+           y = price, fill = level)) +
+    geom_boxplot() +
+  ggtitle("Boxplot of Price for Level")+
+  xlab("Level ")+
+  ylab(" Price")
+```
+```{r}
+onetestanova <- aov(price ~ level, dataudemy)
+summary(onetestanova)
+```
+
+
+
+
+
+##Simple Linear regression
+##RQ
+##Is there a relationship between the number of lectures and the number of reviews for udemy courses?
+```{r}
+model <- lm(num_lectures~num_reviews, 
+            data=udemy)
+summary(model)
+```
+
+### Scatter Plot
+```{r}
+ggplot(udemy, 
+       aes(x=num_reviews, 
+           y=num_lectures)) + 
+  geom_point() + 
+  stat_smooth(method = lm)
+```
+
+#Normality Check
+```{r}
+qqnorm(model$residuals)
+qqline(model$residuals)
+```
+
+```{r}
+shapiro.test(udemy$num_lectures)
+```
+
+## Residuals vs Fitted Plot
+```{r}
+yhat=predict(model)
+resid=model$residuals
+
+plot(yhat,
+     resid,
+     pch=16,
+     xlab="fitted values",
+     ylab="residuals")
+abline(h=0)  
+```
+
+## Box-Cox Transformation
+```{r}
+boxcox(model)  
+```
+
+apply log(y) transformation
+
+
+# New model
+```{r}
+new_model <- lm(log(num_lectures)~num_reviews, 
+                data=udemy)
+summary(new_model)
+
+ggplot(udemy, 
+       aes(x=num_reviews, 
+           y=log(num_lectures))) + 
+  geom_point() + 
+  stat_smooth(method = lm)
+```
+
+
+```{r}
+shapiro.test(log(udemy$num_lectures))
+```
+
+# Transformation on X
+```{r}
+new_model <- lm(log(num_lectures)~sqrt(num_reviews), 
+                data=udemy)
+
+ggplot(udemy, 
+       aes(x=sqrt(num_reviews), 
+                  y=log(num_lectures))) + 
+  geom_point() + 
+  stat_smooth(method = lm)
+
+summary(new_model)
+
+```
+
+
+
+
+
+
+
+
+
+
+##Multiple Linear Regression
+##RQ
+# Does the number of subscribers, course price, number of reviews, content duration and does money paid for courses or not affect the number of lectures?
+  
+```{r}
+modeludemy <- lm(num_lectures~ num_subscribers+
+                  price+
+                  num_reviews+
+                  content_duration+
+                  is_paid,
+                dataudemy)
+
+summary(modeludemy) 
+```
+
+# QQ-Plot and Normality Test
+```{r}
+qqnorm(modeludemy$residuals)
+qqline(modeludemy$residuals)
+shapiro.test(dataudemy$num_lectures)
+```
+
+# Box-cox transformation
+```{r}
+boxcox(modeludemy)
+
+boxcoxnc(dataudemy$num_lectures)
+```
+
+# Transformed model
+```{r}
+modeludemy_transformed <- lm(log(num_lectures)~ num_subscribers+
+                   price+
+                   num_reviews+
+                   content_duration+
+                   is_paid,
+                 dataudemy)
+
+summary(modeludemy_transformed)
+```
+
+# QQ-Plot and Normality Test
+```{r}
+qqnorm(modeludemy_transformed$residuals)
+qqline(modeludemy_transformed$residuals)
+shapiro.test(log(dataudemy$num_lectures))
+```
+
+# Variance Infilation Factor Check
+```{r}
+vif(newmodel_udemy_transformed)
+```
+
+# Residuals disrribution
+```{r}
+yhat=predict(newmodel_udemy_transformed)
+resid=newmodel_udemy_transformed$residuals
+plot(yhat,
+     resid,
+     pch=16,
+     xlab="fitted values",
+     ylab="residuals")
+abline(h=0)
+```
+
+#Linearity Check
+```{r}
+plot(log(num_lectures)~num_subscribers,data = dataudemy)
+plot(log(num_lectures)~price,data = dataudemy)
+plot(log(num_lectures)~content_duration,data = dataudemy)
+
+par(mfrow=c(2,2))
+plot(newmodel_udemy_transformed)
+```
+
+#The best version of the model
+```{r}
+newmodel_udemy_transformed <- lm(log(num_lectures)~ num_subscribers+ 
+                                   price+ 
+                                   content_duration,
+                                 dataudemy)
+
+summary(newmodel_udemy_transformed)
+```
+
+
+```{r}
+```
+
+
+
