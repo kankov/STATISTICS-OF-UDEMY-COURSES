@@ -1,0 +1,314 @@
+library(ggplot2)
+library(dplyr)
+library(MASS)
+library(AID)
+library(car)
+
+
+dataudemy <- read.csv("D:/project/udemy_courses.csv")
+set.seed(1)
+
+##plots
+#1
+dataudemy %>%
+  ggplot( aes(x=price)) +
+    geom_density(fill="yellow", 
+                 color="blue", 
+                 alpha=0.9)
+
+#2
+tab2 <- as.data.frame(table(dataudemy$level))
+tab2
+barplot(height=tab2$Freq, 
+        names=tab2$Var1, 
+        col="blue",
+        # horiz=F, 
+        las=1,
+        main = "Price in levels",
+        ylab = "Price",
+        xlab = "Levels")
+ #3
+ ggplot(data=dataudemy, 
+             aes(x=price, 
+                group=subject, 
+                fill=subject)) +
+    geom_density(adjust=1.2, 
+                 alpha=0.5) 
+
+#4
+#only numerics as simple table
+
+corr=round(cor(dataudemy[,c(5,6,7,8,10)]),3)
+corr
+#corelation matrix as a plot
+corrplot(corr, 
+         type = "upper", 
+         order = "hclust", 
+         tl.col = "black", 
+         tl.srt = 45)
+
+#5
+#The most popular 3 courses
+
+asd<-dataudemy[order(dataudemy$num_subscribers,
+                                  decreasing = TRUE),]
+
+barplot(asdbar$num_subscribers[1:3],
+        main="The most popular 3 courses",
+        xlab="Courses",
+        ylab="Number of Subscribers",
+        names.arg = asd$course_title[1:3],
+        cex.names=0.7,
+        col="orange",
+        # ylim = c(0,300000))
+
+
+#6
+ggplot(dataudemy, 
+       aes(x=num_subscribers, 
+                      y=num_lectures)) + 
+  geom_point() + 
+  stat_smooth(method = lm)
+  
+ggplot(dataudemy, 
+       aes(x=price, 
+           y=num_lectures)) + 
+  geom_point()+ 
+  stat_smooth(method = lm)
+  
+ggplot(dataudemy, 
+       aes(x=num_reviews, 
+           y=num_lectures)) + 
+  geom_point() 
+
+ggplot(dataudemy, 
+       aes(x=content_duration, 
+           y=num_lectures)) + 
+  geom_point() 
+
+ggplot(dataudemy, 
+       aes(x=is_paid, 
+           y=num_lectures)) + 
+  geom_boxplot()
+
+ggplot(data = dataudemy, 
+       aes(x = num_reviews, 
+           y = num_lectures, 
+           col = is_paid)) +
+  geom_point() + geom_smooth()
+  
+  
+  
+  
+  
+  
+#**********************************************************************************************************************
+ 
+## Is the average price paid for courses different from 40? 
+
+t.test(dataudemy$price,
+       mu = 40)
+
+
+
+## Are the average number of subscribers and the number of reviews equal to each other? 
+
+t.test(x = dataudemy$num_subscribers, 
+       y = dataudemy$num_reviews)
+
+
+## Is there any difference between the average price for different levels?
+
+onetestanova <- aov(price ~ level, dataudemy)
+summary(onetestanova)
+
+
+ggplot(dataudemy, 
+       aes(x = level, 
+           y = price, fill = level)) +
+    geom_boxplot() +
+  ggtitle("Boxplot of Price for Level")+
+  xlab("Level ")+
+  ylab(" Price")
+
+
+
+*******************************************************************************************************
+
+
+
+  
+##Simple Linear regression
+  
+##RQ
+##Is there a relationship between the number of lectures and the number of reviews for udemy courses?
+  
+model <- lm(num_lectures~num_reviews, 
+            data=udemy)
+summary(model)
+
+### Scatter Plot 
+
+library(ggplot2)
+ggplot(udemy, 
+       aes(x=num_reviews, 
+           y=num_lectures)) + 
+  geom_point() + 
+  stat_smooth(method = lm)
+  
+  
+qqnorm(model$residuals)
+qqline(model$residuals)
+
+shapiro.test(udemy$num_lectures)
+  
+  
+ #### Residuals vs Fitted Plot
+
+yhat=predict(model)
+resid=model$residuals
+
+plot(yhat,
+     resid,
+     pch=16,
+     xlab="fitted values",
+     ylab="residuals")
+abline(h=0)  
+  
+  
+#### Box-Cox Transformation
+
+boxcox(model)  
+ 
+ 
+##apply log(y) transformation
+  
+new_model <- lm(log(num_lectures)~num_reviews, 
+                data=udemy)
+summary(new_model)
+
+ggplot(udemy, 
+       aes(x=num_reviews, 
+           y=log(num_lectures))) + 
+  geom_point() + 
+  stat_smooth(method = lm)
+
+shapiro.test(log(udemy$num_lectures))
+
+
+#### Transformation on X
+
+new_model <- lm(log(num_lectures)~sqrt(num_reviews), 
+                data=udemy)
+
+ggplot(udemy, 
+       aes(x=sqrt(num_reviews), 
+                  y=log(num_lectures))) + 
+  geom_point() + 
+  stat_smooth(method = lm)
+
+summary(new_model)
+  
+  
+  
+  
+  
+  
+  
+ 
+  
+##Multiple Linear Regression
+ 
+ ##RQ
+##Does the number of subscribers, course price, number of reviews, content duration and does money paid for courses or not affect the number of lectures?
+  
+modeludemy <- lm(num_lectures~ num_subscribers+
+                  price+
+                  num_reviews+
+                  content_duration+
+                  is_paid,
+                dataudemy)
+
+summary(modeludemy) 
+  
+
+#### QQ-Plot and Normality Test
+qqnorm(modeludemy$residuals)
+qqline(modeludemy$residuals)
+shapiro.test(dataudemy$num_lectures)
+
+
+##Box-cox transformation is used
+boxcox(modeludemy)
+
+boxcoxnc(dataudemy$num_lectures)
+
+
+##transformed model
+
+modeludemy_transformed <- lm(log(num_lectures)~ num_subscribers+
+                   price+
+                   num_reviews+
+                   content_duration+
+                   is_paid,
+                 dataudemy)
+
+summary(modeludemy_transformed)
+
+#### QQ-Plot and Normality Test
+qqnorm(modeludemy_transformed$residuals)
+qqline(modeludemy_transformed$residuals)
+shapiro.test(log(dataudemy$num_lectures))
+
+vif(newmodel_udemy_transformed)
+
+
+yhat=predict(newmodel_udemy_transformed)
+resid=newmodel_udemy_transformed$residuals
+plot(yhat,
+     resid,
+     pch=16,
+     xlab="fitted values",
+     ylab="residuals")
+abline(h=0)
+
+##Linearity Check
+plot(log(num_lectures)~num_subscribers,data = dataudemy)
+plot(log(num_lectures)~price,data = dataudemy)
+plot(log(num_lectures)~content_duration,data = dataudemy
+
+par(mfrow=c(2,2))
+plot(newmodel_udemy_transformed)
+
+
+###The best version of the model
+
+newmodel_udemy_transformed <- lm(log(num_lectures)~ num_subscribers+ 
+                                   price+ 
+                                   content_duration,
+                                 dataudemy)
+
+summary(newmodel_udemy_transformed)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  
+  
